@@ -437,6 +437,7 @@ function validateCourseRequirement(
   return Err(CourseError(r));
 }
 
+const max_combo = 1000;
 function validateRangeRequirement(
   r: ICourseRange2,
   tracker: CourseValidationTracker
@@ -465,13 +466,26 @@ function validateRangeRequirement(
       // TODO: if i take a course twice, can both count in the same range?
       // for now assume yes. but ask khoury, then remove this note
       if (tracker.hasEnoughCoursesForBoth(solutionSoFar, courseSol)) {
-        const currentSol: Solution = combineSolutions(solutionSoFar, courseSol);
-        solutionsSoFarWithCourse.push(currentSol);
+        solutionsSoFarWithCourse.push({
+          sol: [...solutionSoFar.sol, cs],
+          minCredits: solutionSoFar.minCredits + course.numCreditsMin,
+          maxCredits: solutionSoFar.maxCredits + course.numCreditsMax,
+        });
       }
     }
-    // include solutions where the only course is ourself
+
+    // Add the current course as a new solution
     solutionsSoFarWithCourse.push(courseSol);
+
+    // Update the solutions so far
     solutionsSoFar.push(...solutionsSoFarWithCourse);
+
+    if (solutionsSoFar.length > max_combo) {
+      return Err({
+        type: MajorValidationErrorType.Course,
+        requiredCourse: "Too many combinations :(",
+      });
+    }
   }
   return Ok(solutionsSoFar);
 }
